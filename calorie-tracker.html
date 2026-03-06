@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Calorie Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f0f;
+    --surface: #161818;
+    --surface2: #1e2020;
+    --border: #2a2d2d;
+    --accent: #c8f060;
+    --accent2: #60f0c8;
+    --danger: #f06060;
+    --text: #f0ede8;
+    --muted: #6b7070;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+
+  body { display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+  .app { width: 100%; max-width: 420px; min-height: 100vh; display: flex; flex-direction: column; padding: 0 0 100px; }
+
+  /* Header */
+  .header { padding: 48px 24px 24px; }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+  .greeting { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .date { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .settings-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); transition: all 0.2s; flex-shrink: 0; }
+  .settings-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  /* Ring */
+  .ring-section { display: flex; flex-direction: column; align-items: center; padding: 0 24px 32px; }
+  .ring-wrap { position: relative; width: 180px; height: 180px; margin-bottom: 20px; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--surface2); stroke-width: 14; }
+  .ring-fill { fill: none; stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1), stroke 0.4s; }
+  .ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .ring-cal { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; line-height: 1; }
+  .ring-label { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+
+  .stats-row { display: flex; gap: 16px; width: 100%; }
+  .stat-pill { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; text-align: center; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .stat-lbl { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+  .stat-pill.goal .stat-val { color: var(--accent); }
+  .stat-pill.remaining .stat-val { }
+
+  /* Search */
+  .section { padding: 0 24px; margin-bottom: 24px; }
+  .section-title { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .search-wrap { position: relative; }
+  .search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 48px 14px 16px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text); outline: none; transition: border-color 0.2s; }
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+
+  .results { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: none; }
+  .results.open { display: block; }
+  .result-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+  .result-item:last-child { border-bottom: none; }
+  .result-item:hover { background: var(--surface2); }
+  .result-name { font-size: 14px; font-weight: 500; }
+  .result-cal { font-family: 'Syne', sans-serif; font-size: 13px; color: var(--accent); font-weight: 600; }
+  .result-serving { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Log */
+  .log-list { display: flex; flex-direction: column; gap: 8px; }
+  .log-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; animation: slideIn 0.25s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .log-info { flex: 1; }
+  .log-name { font-size: 14px; font-weight: 500; }
+  .log-serving { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .log-right { display: flex; align-items: center; gap: 12px; }
+  .log-cal { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); }
+  .log-del { width: 28px; height: 28px; border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-size: 14px; }
+  .log-del:hover { background: var(--danger); border-color: var(--danger); color: white; }
+  .empty-log { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+  /* Goal modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 100; display: none; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 340px; animation: popIn 0.2s ease; }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .modal-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 700; color: var(--accent); outline: none; text-align: center; transition: border-color 0.2s; }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .btn { flex: 1; padding: 14px; border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: none; letter-spacing: 0.05em; }
+  .btn-ghost { background: var(--surface2); color: var(--muted); }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-primary { background: var(--accent); color: #0e0f0f; }
+  .btn-primary:hover { background: #d4f570; }
+
+  /* Over budget */
+  .over { color: var(--danger) !important; }
+  .ring-over { stroke: var(--danger) !important; }
+
+  .water-oz-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .water-oz-big { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:#60c8f0; }
+  .water-oz-meta { font-size:12px; color:var(--muted); text-align:right; line-height:1.6; }
+  .water-oz-meta span { color:var(--muted); }
+
+  /* Water Tracker */
+  .water-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+  .water-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .water-title { display: flex; align-items: center; gap: 8px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
+  .water-title svg { color: #60c8f0; }
+  .water-count { font-family: 'Syne', sans-serif; font-size: 13px; color: var(--muted); }
+  .water-count span { color: #60c8f0; font-weight: 700; font-size: 15px; }
+  .water-bottles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; min-height: 44px; align-items: center; }
+  .bottle-icon { font-size: 26px; animation: dropIn 0.2s ease; cursor: pointer; transition: transform 0.15s; }
+  .bottle-icon:hover { transform: scale(1.15); }
+  @keyframes dropIn { from { opacity: 0; transform: scale(0.5) rotate(-10deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+  .water-actions { display: flex; gap: 10px; align-items: center; }
+  .water-btn { width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; transition: all 0.15s; }
+  .water-add { background: #60c8f0; color: #0e0f0f; flex: 1; height: 44px; border-radius: 12px; border: none; cursor: pointer; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .water-add:hover { background: #7dd4f5; }
+  .water-minus { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer; font-size: 20px; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .water-minus:hover { color: var(--danger); background: var(--surface2); }
+  .water-goal-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .water-goal-text { font-size: 12px; color: var(--muted); }
+  .water-goal-text span { color: #60c8f0; font-weight: 600; }
+  .water-progress { height: 5px; background: var(--surface2); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .water-progress-fill { height: 100%; border-radius: 3px; background: #60c8f0; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+  .water-complete { color: #60c8f0; font-size: 12px; font-weight: 600; }
+
+  /* History */
+  .history-day { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+  .history-date-block { min-width: 44px; text-align: center; }
+  .history-dow { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .history-dom { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; line-height: 1; }
+  .history-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+  .history-stats { flex: 1; display: flex; gap: 18px; }
+  .history-stat { display: flex; flex-direction: column; gap: 2px; }
+  .history-stat-val { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .history-stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .history-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; font-family: 'Syne', sans-serif; letter-spacing: 0.05em; }
+  .badge-under { background: rgba(200,240,96,0.12); color: var(--accent); }
+  .badge-over { background: rgba(240,96,96,0.12); color: var(--danger); }
+  .empty-history { text-align: center; padding: 24px 16px; color: var(--muted); font-size: 14px; }
+
+  /* Custom qty modal */
+  .qty-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 340px; animation: popIn 0.2s ease; }
+  .qty-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .qty-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font-family: 'DM Sans', sans-serif; font-size: 16px; color: var(--text); outline: none; margin-bottom: 20px; text-align: center; }
+  .qty-input:focus { border-color: var(--accent2); }
+
+  .progress-bar-wrap { height: 6px; background: var(--surface2); border-radius: 3px; margin-top: 16px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="greeting">Today's Calories</div>
+        <div class="date" id="dateLabel"></div>
+      </div>
+      <button class="settings-btn" onclick="openGoalModal()" title="Set daily goal">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <!-- Ring -->
+    <div class="ring-section">
+      <div class="ring-wrap">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle class="ring-bg" cx="90" cy="90" r="76"/>
+          <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="76" stroke-dasharray="477.5" stroke-dashoffset="477.5" stroke="var(--accent)"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-cal" id="ringCal">0</div>
+          <div class="ring-label">eaten</div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-pill goal">
+          <div class="stat-val" id="goalVal">2000</div>
+          <div class="stat-lbl">Goal</div>
+        </div>
+        <div class="stat-pill remaining">
+          <div class="stat-val" id="remainVal">2000</div>
+          <div class="stat-lbl" id="remainLbl">Remaining</div>
+        </div>
+      </div>
+      <div class="progress-bar-wrap" style="width:100%;margin-top:16px;">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="section">
+    <div class="section-title">Add Food</div>
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" type="text" placeholder="Search foods..." autocomplete="off" oninput="onSearch()" onfocus="onSearch()">
+      <span class="search-icon">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+    </div>
+    <div class="results" id="results"></div>
+  </div>
+
+  <!-- Water Tracker -->
+  <div class="section">
+    <div class="section-title">Water</div>
+    <div class="water-card">
+      <div class="water-top">
+        <div class="water-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 2C6 9 4 13 4 16a8 8 0 0 0 16 0c0-3-2-7-8-14z"/></svg>
+          Water Intake
+        </div>
+        <div class="water-count"><span id="waterCount">0</span> bottles</div>
+      </div>
+      <div class="water-oz-row">
+        <div class="water-oz-big" id="waterOz">0 oz</div>
+        <div class="water-oz-meta">16.9 oz per bottle<br><span id="waterOzRemain"></span></div>
+      </div>
+      <div class="water-bottles" id="waterBottles">
+        <span style="font-size:13px;color:var(--muted)">Press + to log a bottle</span>
+      </div>
+      <div class="water-progress">
+        <div class="water-progress-fill" id="waterProgressFill" style="width:0%"></div>
+      </div>
+      <div class="water-goal-row">
+        <div class="water-goal-text">Daily goal: <span id="waterGoalLabel">8 bottles (135.2 oz)</span></div>
+        <div id="waterCompleteMsg"></div>
+      </div>
+      <div class="water-actions" style="margin-top:14px;">
+        <button class="water-minus" onclick="removeWater()" title="Remove one">－</button>
+        <button class="water-add" onclick="addWater()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Add Bottle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="section">
+    <div class="section-title">Today's Log</div>
+    <div class="log-list" id="logList">
+      <div class="empty-log">No foods logged yet.<br>Search above to add something.</div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="section">
+    <div class="section-title">Past Days</div>
+    <div class="log-list" id="historyList">
+      <div class="empty-history">No history yet.<br>Come back tomorrow!</div>
+    </div>
+  </div>
+</div>
+
+<!-- Goal Modal -->
+<div class="modal-overlay" id="goalModal">
+  <div class="modal">
+    <div class="modal-title">Daily Goal</div>
+    <div class="modal-sub">Set your calorie target for the day.</div>
+    <input class="modal-input" id="goalInput" type="number" placeholder="2000" min="500" max="9999">
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeGoalModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGoal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Qty Modal -->
+<div class="modal-overlay" id="qtyModal">
+  <div class="qty-modal">
+    <div class="modal-title" id="qtyFoodName">Food</div>
+    <div class="modal-sub" id="qtyFoodCal"></div>
+    <div class="qty-label">Number of servings</div>
+    <input class="qty-input" id="qtyInput" type="number" value="1" min="0.25" max="20" step="0.25">
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeQtyModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAdd()" style="background:var(--accent2);color:#0e0f0f;">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Food database
+const FOODS = [
+  // --- PREMIER PROTEIN SHAKES ---
+  { name: "Premier Protein Shake - Chocolate", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Vanilla", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Caramel", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Strawberries & Cream", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Cookies & Cream", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Peaches & Cream", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Bananas & Cream", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Pumpkin Spice", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Cake Batter Delight", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Cinnamon Roll", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Honey Caramel", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Café Latte", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Chocolate Peanut Butter", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Root Beer Float", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Shake - Orange Dreamsicle", cal: 160, serving: "1 bottle (11.5 oz)" },
+  { name: "Premier Protein Bar - Chocolate Brownie", cal: 290, serving: "1 bar (2.53 oz)" },
+  { name: "Premier Protein Bar - Chocolate Peanut Butter", cal: 290, serving: "1 bar (2.53 oz)" },
+  { name: "Premier Protein Bar - Yogurt Peanut Crunch", cal: 290, serving: "1 bar (2.53 oz)" },
+  { name: "Premier Protein Powder - Chocolate Milkshake", cal: 150, serving: "1 scoop (41g)" },
+  { name: "Premier Protein Powder - Vanilla Milkshake", cal: 150, serving: "1 scoop (41g)" },
+
+  // --- QUEST NUTRITION ---
+  { name: "Quest Bar - Chocolate Chip Cookie Dough", cal: 190, serving: "1 bar (60g)" },
+  { name: "Quest Bar - Cookies & Cream", cal: 190, serving: "1 bar (60g)" },
+  { name: "Quest Bar - Birthday Cake", cal: 190, serving: "1 bar (60g)" },
+  { name: "Quest Bar - Peanut Butter Chocolate Chip", cal: 190, serving: "1 bar (60g)" },
+  { name: "Quest Bar - Blueberry Muffin", cal: 190, serving: "1 bar (60g)" },
+  { name: "Quest Bar - S'mores", cal: 190, serving: "1 bar (60g)" },
+  { name: "Quest Bar - Double Chocolate Chunk", cal: 180, serving: "1 bar (60g)" },
+  { name: "Quest Bar - White Chocolate Raspberry", cal: 190, serving: "1 bar (60g)" },
+  { name: "Quest Chips - Ranch", cal: 140, serving: "1 bag (32g)" },
+  { name: "Quest Chips - BBQ", cal: 140, serving: "1 bag (32g)" },
+  { name: "Quest Chips - Nacho Cheese", cal: 140, serving: "1 bag (32g)" },
+  { name: "Quest Protein Powder - Chocolate", cal: 120, serving: "1 scoop (36g)" },
+  { name: "Quest Protein Powder - Vanilla", cal: 100, serving: "1 scoop (36g)" },
+
+  // --- KIND BARS ---
+  { name: "KIND Bar - Dark Chocolate Nuts & Sea Salt", cal: 200, serving: "1 bar (40g)" },
+  { name: "KIND Bar - Peanut Butter Dark Chocolate", cal: 200, serving: "1 bar (40g)" },
+  { name: "KIND Bar - Almond & Coconut", cal: 200, serving: "1 bar (40g)" },
+  { name: "KIND Bar - Caramel Almond & Sea Salt", cal: 200, serving: "1 bar (40g)" },
+  { name: "KIND Breakfast Bar - Peanut Butter", cal: 220, serving: "1 bar (50g)" },
+  { name: "KIND Breakfast Bar - Dark Chocolate Cocoa", cal: 220, serving: "1 bar (50g)" },
+
+  // --- CLIF BAR ---
+  { name: "Clif Bar - Chocolate Chip", cal: 250, serving: "1 bar (68g)" },
+  { name: "Clif Bar - White Chocolate Macadamia Nut", cal: 260, serving: "1 bar (68g)" },
+  { name: "Clif Bar - Peanut Butter Banana", cal: 260, serving: "1 bar (68g)" },
+  { name: "Clif Bar - Oatmeal Raisin Walnut", cal: 240, serving: "1 bar (68g)" },
+  { name: "Clif Shot Bloks - Black Cherry", cal: 100, serving: "3 blocks (30g)" },
+
+  // --- RXBAR ---
+  { name: "RXBAR - Chocolate Sea Salt", cal: 210, serving: "1 bar (52g)" },
+  { name: "RXBAR - Blueberry", cal: 210, serving: "1 bar (52g)" },
+  { name: "RXBAR - Peanut Butter Chocolate", cal: 220, serving: "1 bar (52g)" },
+  { name: "RXBAR - Mixed Berry", cal: 200, serving: "1 bar (52g)" },
+  { name: "RXBAR - Banana Chocolate Walnut", cal: 210, serving: "1 bar (52g)" },
+
+  // --- FAIRLIFE ---
+  { name: "Fairlife Core Power Elite - Chocolate (42g protein)", cal: 230, serving: "1 bottle (14 oz)" },
+  { name: "Fairlife Core Power Elite - Vanilla (42g protein)", cal: 230, serving: "1 bottle (14 oz)" },
+  { name: "Fairlife Core Power - Chocolate (26g protein)", cal: 170, serving: "1 bottle (11.5 oz)" },
+  { name: "Fairlife Core Power - Strawberry Banana", cal: 170, serving: "1 bottle (11.5 oz)" },
+  { name: "Fairlife Milk - 2%", cal: 120, serving: "1 cup" },
+  { name: "Fairlife Milk - Whole", cal: 150, serving: "1 cup" },
+  { name: "Fairlife Chocolate Milk", cal: 140, serving: "1 cup" },
+
+  // --- OIKOS / CHOBANI ---
+  { name: "Oikos Pro - Vanilla Bean", cal: 130, serving: "1 container (5.3 oz)" },
+  { name: "Oikos Pro - Chocolate Fudge", cal: 130, serving: "1 container (5.3 oz)" },
+  { name: "Oikos Triple Zero - Strawberry", cal: 90, serving: "1 container (5.3 oz)" },
+  { name: "Oikos Triple Zero - Vanilla", cal: 90, serving: "1 container (5.3 oz)" },
+  { name: "Chobani Greek Yogurt - Plain Nonfat", cal: 90, serving: "1 container (5.3 oz)" },
+  { name: "Chobani Greek Yogurt - Strawberry", cal: 120, serving: "1 container (5.3 oz)" },
+  { name: "Chobani Flip - Almond Coco Loco", cal: 190, serving: "1 container (5.3 oz)" },
+  { name: "Chobani Zero Sugar - Vanilla", cal: 60, serving: "1 container (5.3 oz)" },
+
+  // --- MUSCLE MILK ---
+  { name: "Muscle Milk Genuine - Chocolate", cal: 150, serving: "1 bottle (11 oz)" },
+  { name: "Muscle Milk Genuine - Vanilla Crème", cal: 150, serving: "1 bottle (11 oz)" },
+  { name: "Muscle Milk Pro Series - Knockout Chocolate", cal: 200, serving: "1 bottle (14 oz)" },
+  { name: "Muscle Milk Gainer - Chocolate", cal: 650, serving: "4 scoops (162g)" },
+
+  // --- SPECIAL K / KELLOGG'S ---
+  { name: "Special K Cereal - Original", cal: 120, serving: "1 cup" },
+  { name: "Special K Cereal - Red Berries", cal: 110, serving: "1 cup" },
+  { name: "Special K Protein Bar - Chocolate Peanut Butter", cal: 180, serving: "1 bar (45g)" },
+  { name: "Kellogg's Nutri-Grain Bar - Strawberry", cal: 130, serving: "1 bar (37g)" },
+  { name: "Kellogg's Nutri-Grain Bar - Blueberry", cal: 130, serving: "1 bar (37g)" },
+  { name: "Kellogg's Rice Krispies Treat", cal: 90, serving: "1 bar (22g)" },
+
+  // --- NATURE VALLEY ---
+  { name: "Nature Valley Crunchy Bar - Oats & Honey", cal: 190, serving: "2 bars (42g)" },
+  { name: "Nature Valley Crunchy Bar - Peanut Butter", cal: 190, serving: "2 bars (42g)" },
+  { name: "Nature Valley Protein Bar - Peanut Almond Dark Choc", cal: 200, serving: "1 bar (40g)" },
+  { name: "Nature Valley Sweet & Salty - Almond", cal: 160, serving: "1 bar (35g)" },
+
+  // --- STARBUCKS ---
+  { name: "Starbucks Caffe Latte (Grande, 2% milk)", cal: 190, serving: "16 oz" },
+  { name: "Starbucks Caramel Macchiato (Grande)", cal: 250, serving: "16 oz" },
+  { name: "Starbucks Frappuccino - Mocha (Bottled)", cal: 200, serving: "9.5 oz bottle" },
+  { name: "Starbucks Iced Coffee (Bottled, Vanilla)", cal: 180, serving: "11 oz bottle" },
+  { name: "Starbucks Cold Brew (Grande, black)", cal: 5, serving: "16 oz" },
+  { name: "Starbucks Pumpkin Spice Latte (Grande)", cal: 380, serving: "16 oz" },
+  { name: "Starbucks Vanilla Latte (Grande)", cal: 250, serving: "16 oz" },
+  { name: "Starbucks Egg Bites - Bacon & Gruyere", cal: 310, serving: "2 bites" },
+  { name: "Starbucks Spinach Feta Wrap", cal: 290, serving: "1 wrap" },
+  { name: "Starbucks Butter Croissant", cal: 260, serving: "1 croissant" },
+  { name: "Starbucks Chocolate Croissant", cal: 340, serving: "1 croissant" },
+  { name: "Starbucks Blueberry Scone", cal: 380, serving: "1 scone" },
+
+  // --- McDONALD'S ---
+  { name: "McDonald's Big Mac", cal: 550, serving: "1 burger" },
+  { name: "McDonald's Quarter Pounder with Cheese", cal: 520, serving: "1 burger" },
+  { name: "McDonald's McDouble", cal: 400, serving: "1 burger" },
+  { name: "McDonald's Filet-O-Fish", cal: 390, serving: "1 sandwich" },
+  { name: "McDonald's McChicken", cal: 400, serving: "1 sandwich" },
+  { name: "McDonald's French Fries - Small", cal: 230, serving: "1 small" },
+  { name: "McDonald's French Fries - Medium", cal: 320, serving: "1 medium" },
+  { name: "McDonald's French Fries - Large", cal: 490, serving: "1 large" },
+  { name: "McDonald's Egg McMuffin", cal: 310, serving: "1 sandwich" },
+  { name: "McDonald's Sausage McMuffin with Egg", cal: 480, serving: "1 sandwich" },
+  { name: "McDonald's Hotcakes (3)", cal: 350, serving: "3 hotcakes" },
+  { name: "McDonald's McFlurry - Oreo", cal: 510, serving: "1 regular" },
+  { name: "McDonald's Vanilla Soft Serve Cone", cal: 200, serving: "1 cone" },
+  { name: "McDonald's Apple Pie", cal: 240, serving: "1 pie" },
+
+  // --- CHICK-FIL-A ---
+  { name: "Chick-fil-A Chicken Sandwich", cal: 470, serving: "1 sandwich" },
+  { name: "Chick-fil-A Deluxe Sandwich", cal: 510, serving: "1 sandwich" },
+  { name: "Chick-fil-A Grilled Chicken Sandwich", cal: 390, serving: "1 sandwich" },
+  { name: "Chick-fil-A Nuggets (8 pc)", cal: 260, serving: "8 pieces" },
+  { name: "Chick-fil-A Grilled Nuggets (8 pc)", cal: 130, serving: "8 pieces" },
+  { name: "Chick-fil-A Waffle Fries - Small", cal: 310, serving: "1 small" },
+  { name: "Chick-fil-A Waffle Fries - Medium", cal: 420, serving: "1 medium" },
+  { name: "Chick-fil-A Cobb Salad (no dressing)", cal: 510, serving: "1 salad" },
+  { name: "Chick-fil-A Market Salad (no dressing)", cal: 340, serving: "1 salad" },
+
+  // --- CHIPOTLE ---
+  { name: "Chipotle Chicken Burrito (rice, beans, cheese, salsa)", cal: 890, serving: "1 burrito" },
+  { name: "Chipotle Chicken Bowl (rice, beans, cheese, salsa)", cal: 790, serving: "1 bowl" },
+  { name: "Chipotle Steak Burrito Bowl", cal: 810, serving: "1 bowl" },
+  { name: "Chipotle Sofritas Bowl (vegan)", cal: 620, serving: "1 bowl" },
+  { name: "Chipotle Chips & Guacamole", cal: 490, serving: "1 serving" },
+  { name: "Chipotle Guacamole (side)", cal: 230, serving: "1 side" },
+
+  // --- SUBWAY ---
+  { name: "Subway 6\" Turkey Breast", cal: 280, serving: "6\" sub" },
+  { name: "Subway 6\" Oven Roasted Chicken", cal: 320, serving: "6\" sub" },
+  { name: "Subway 6\" Tuna", cal: 480, serving: "6\" sub" },
+  { name: "Subway 6\" Veggie Delite", cal: 190, serving: "6\" sub" },
+  { name: "Subway Footlong Turkey Breast", cal: 560, serving: "12\" sub" },
+
+  // --- PANERA BREAD ---
+  { name: "Panera Bread Fuji Apple Salad (full)", cal: 570, serving: "1 salad" },
+  { name: "Panera Bread You Pick Two - Half Soup + Half Sandwich", cal: 520, serving: "1 combo" },
+  { name: "Panera Bread Broccoli Cheddar Soup", cal: 360, serving: "1 bowl" },
+  { name: "Panera Bread Bagel - Plain", cal: 300, serving: "1 bagel" },
+  { name: "Panera Bread Bagel - Blueberry", cal: 330, serving: "1 bagel" },
+
+  // --- PROTEIN SUPPLEMENTS ---
+  { name: "Optimum Nutrition Gold Standard Whey - Double Chocolate", cal: 120, serving: "1 scoop (31g)" },
+  { name: "Optimum Nutrition Gold Standard Whey - Vanilla", cal: 120, serving: "1 scoop (31g)" },
+  { name: "Optimum Nutrition Gold Standard Whey - Strawberry Banana", cal: 120, serving: "1 scoop (31g)" },
+  { name: "Ghost Whey Protein - Oreo", cal: 130, serving: "1 scoop (35g)" },
+  { name: "Ghost Whey Protein - Chips Ahoy", cal: 130, serving: "1 scoop (35g)" },
+  { name: "Ghost Whey Protein - Nutter Butter", cal: 140, serving: "1 scoop (35g)" },
+  { name: "Dymatize ISO100 Whey - Chocolate Fudge", cal: 110, serving: "1 scoop (29g)" },
+  { name: "Dymatize ISO100 Whey - Fruity Pebbles", cal: 110, serving: "1 scoop (29g)" },
+  { name: "MyProtein Impact Whey - Chocolate Smooth", cal: 103, serving: "1 scoop (25g)" },
+
+  // --- ENERGY DRINKS ---
+  { name: "Red Bull Original", cal: 110, serving: "8.4 oz can" },
+  { name: "Red Bull Sugar Free", cal: 10, serving: "8.4 oz can" },
+  { name: "Monster Energy Original", cal: 210, serving: "16 oz can" },
+  { name: "Monster Energy Zero Ultra", cal: 10, serving: "16 oz can" },
+  { name: "Celsius Original - Orange", cal: 10, serving: "12 oz can" },
+  { name: "Celsius Original - Sparkling Wild Berry", cal: 10, serving: "12 oz can" },
+  { name: "Celsius Original - Peach Mango Green Tea", cal: 10, serving: "12 oz can" },
+  { name: "Bang Energy - Cotton Candy", cal: 0, serving: "16 oz can" },
+  { name: "Bang Energy - Birthday Cake Bash", cal: 0, serving: "16 oz can" },
+  { name: "C4 Energy - Starburst Cherry", cal: 0, serving: "16 oz can" },
+  { name: "Prime Hydration - Lemon Lime", cal: 25, serving: "16.9 oz bottle" },
+  { name: "Prime Hydration - Tropical Punch", cal: 25, serving: "16.9 oz bottle" },
+  { name: "Prime Energy - Blue Raspberry", cal: 10, serving: "12 oz can" },
+
+  // --- CEREALS ---
+  { name: "Cheerios - Original", cal: 100, serving: "1 cup" },
+  { name: "Honey Nut Cheerios", cal: 110, serving: "3/4 cup" },
+  { name: "Frosted Flakes", cal: 130, serving: "3/4 cup" },
+  { name: "Froot Loops", cal: 110, serving: "1 cup" },
+  { name: "Lucky Charms", cal: 110, serving: "3/4 cup" },
+  { name: "Cocoa Puffs", cal: 110, serving: "3/4 cup" },
+  { name: "Cinnamon Toast Crunch", cal: 170, serving: "3/4 cup" },
+  { name: "Cap'n Crunch", cal: 110, serving: "3/4 cup" },
+  { name: "Raisin Bran", cal: 190, serving: "1 cup" },
+  { name: "Grape Nuts", cal: 210, serving: "1/2 cup" },
+  { name: "Life Cereal - Original", cal: 150, serving: "3/4 cup" },
+  { name: "Wheaties", cal: 110, serving: "3/4 cup" },
+
+  // --- SNACKS & CHIPS ---
+  { name: "Lay's Classic Chips", cal: 160, serving: "1 oz (about 15 chips)" },
+  { name: "Lay's Baked Original", cal: 120, serving: "1 oz" },
+  { name: "Doritos Nacho Cheese", cal: 150, serving: "1 oz (about 12 chips)" },
+  { name: "Doritos Cool Ranch", cal: 150, serving: "1 oz" },
+  { name: "Cheetos Crunchy", cal: 160, serving: "1 oz" },
+  { name: "Cheetos Puffs", cal: 160, serving: "1 oz" },
+  { name: "Pringles Original", cal: 150, serving: "15 crisps (28g)" },
+  { name: "Pringles Sour Cream & Onion", cal: 150, serving: "15 crisps" },
+  { name: "Goldfish Crackers - Cheddar", cal: 140, serving: "55 pieces (30g)" },
+  { name: "Triscuit - Original", cal: 120, serving: "6 crackers (28g)" },
+  { name: "Ritz Crackers", cal: 80, serving: "5 crackers (16g)" },
+  { name: "SkinnyPop Popcorn - Original", cal: 150, serving: "3.75 cups (28g)" },
+  { name: "Orville Redenbacher's Movie Theater Butter Popcorn", cal: 130, serving: "1 cup popped" },
+  { name: "PopCorners Kettle Corn", cal: 120, serving: "1 oz" },
+  { name: "Pretzels - Rold Gold Classic", cal: 110, serving: "1 oz" },
+  { name: "Rice Cakes - Quaker Lightly Salted", cal: 35, serving: "1 cake" },
+  { name: "Rice Cakes - Quaker White Cheddar", cal: 35, serving: "1 cake" },
+  { name: "Pirates Booty Aged White Cheddar", cal: 120, serving: "1 oz" },
+
+  // --- FROZEN / PACKAGED MEALS ---
+  { name: "Lean Cuisine Chicken Tikka Masala", cal: 280, serving: "1 meal (9 oz)" },
+  { name: "Lean Cuisine Spaghetti with Meat Sauce", cal: 280, serving: "1 meal" },
+  { name: "Amy's Cheese Burrito", cal: 280, serving: "1 burrito" },
+  { name: "Amy's Black Bean Burrito", cal: 290, serving: "1 burrito" },
+  { name: "Healthy Choice Power Bowl - Chicken Pesto", cal: 360, serving: "1 bowl" },
+  { name: "Healthy Choice Chicken Fettuccini Alfredo", cal: 250, serving: "1 meal" },
+  { name: "CAULIPOWER Cauliflower Pizza - 3-Cheese (1/3 pizza)", cal: 270, serving: "1/3 pizza" },
+  { name: "DiGiorno Rising Crust Pizza - Pepperoni (1/4 pizza)", cal: 350, serving: "1/4 pizza" },
+  { name: "Rao's Homemade Marinara Sauce", cal: 80, serving: "1/2 cup" },
+
+  // --- BREADS & GRAINS ---
+  { name: "Dave's Killer Bread - 21 Whole Grains", cal: 100, serving: "1 slice" },
+  { name: "Dave's Killer Bread - Powerseed", cal: 100, serving: "1 slice" },
+  { name: "Ezekiel Bread - Original Sprouted", cal: 80, serving: "1 slice" },
+  { name: "Thomas' English Muffin - Original", cal: 120, serving: "1 muffin" },
+  { name: "Thomas' English Muffin - Whole Wheat", cal: 120, serving: "1 muffin" },
+  { name: "Mission Flour Tortilla - Large", cal: 210, serving: "1 tortilla" },
+  { name: "Mission Carb Balance Tortilla", cal: 80, serving: "1 tortilla" },
+
+  // --- DELI & PROTEINS ---
+  { name: "Boar's Head Turkey Breast", cal: 60, serving: "2 oz" },
+  { name: "Boar's Head Honey Ham", cal: 60, serving: "2 oz" },
+  { name: "Boar's Head Roast Beef", cal: 80, serving: "2 oz" },
+  { name: "Oscar Mayer Turkey Pepperoni", cal: 70, serving: "17 slices (30g)" },
+  { name: "Hormel Natural Choice Chicken Strips", cal: 60, serving: "2 oz" },
+  { name: "Applegate Naturals Turkey Bacon", cal: 35, serving: "1 slice" },
+
+  // --- FROZEN TREATS ---
+  { name: "Halo Top Vanilla Bean (pint)", cal: 280, serving: "1 pint" },
+  { name: "Halo Top Chocolate (pint)", cal: 280, serving: "1 pint" },
+  { name: "Halo Top Strawberry (pint)", cal: 240, serving: "1 pint" },
+  { name: "Enlightened Ice Cream - Chocolate Peanut Butter (pint)", cal: 320, serving: "1 pint" },
+  { name: "Yasso Frozen Greek Yogurt Bar - Chocolate Fudge", cal: 80, serving: "1 bar" },
+  { name: "Yasso Frozen Greek Yogurt Bar - Mint Chip", cal: 80, serving: "1 bar" },
+  { name: "Skinny Cow Ice Cream Sandwich - Vanilla", cal: 150, serving: "1 sandwich" },
+  { name: "Outshine Fruit Bar - Strawberry", cal: 60, serving: "1 bar" },
+  { name: "Outshine Fruit Bar - Lime", cal: 60, serving: "1 bar" },
+  { name: "Ben & Jerry's Half Baked (1/2 cup)", cal: 270, serving: "1/2 cup" },
+  { name: "Breyers Natural Vanilla (1/2 cup)", cal: 130, serving: "1/2 cup" },
+  { name: "Talenti Gelato - Sea Salt Caramel", cal: 240, serving: "1/2 cup" },
+
+  // --- BEVERAGES ---
+  { name: "Gatorade Thirst Quencher - Fruit Punch", cal: 80, serving: "12 oz" },
+  { name: "Gatorade Thirst Quencher - Lemon Lime", cal: 80, serving: "12 oz" },
+  { name: "Gatorade Zero - Grape", cal: 10, serving: "12 oz" },
+  { name: "Powerade Mountain Berry Blast", cal: 80, serving: "12 oz" },
+  { name: "Liquid IV Hydration Multiplier - Lemon Lime", cal: 45, serving: "1 packet" },
+  { name: "Coca-Cola Classic", cal: 140, serving: "12 oz can" },
+  { name: "Diet Coke", cal: 0, serving: "12 oz can" },
+  { name: "Coke Zero", cal: 0, serving: "12 oz can" },
+  { name: "Pepsi", cal: 150, serving: "12 oz can" },
+  { name: "Diet Pepsi", cal: 0, serving: "12 oz can" },
+  { name: "Sprite", cal: 140, serving: "12 oz can" },
+  { name: "La Croix Sparkling Water", cal: 0, serving: "12 oz can" },
+  { name: "Bai Antioxidant Infusion - Brasilia Blueberry", cal: 10, serving: "18 oz bottle" },
+  { name: "Snapple Peach Tea", cal: 160, serving: "16 oz bottle" },
+  { name: "Lipton Iced Tea - Sweetened", cal: 100, serving: "12 oz" },
+  { name: "Tropicana Orange Juice - Original", cal: 110, serving: "8 oz" },
+  { name: "Minute Maid Apple Juice", cal: 120, serving: "8 oz" },
+  { name: "Silk Almond Milk - Unsweetened", cal: 30, serving: "1 cup" },
+  { name: "Silk Oat Milk - Extra Creamy", cal: 130, serving: "1 cup" },
+  { name: "Oatly Oat Milk - Original", cal: 120, serving: "1 cup" },
+
+  // --- CANDY & SWEETS ---
+  { name: "Reese's Peanut Butter Cups (2-pack)", cal: 210, serving: "2 cups (42g)" },
+  { name: "Snickers Bar", cal: 250, serving: "1 bar (52.7g)" },
+  { name: "Kit Kat (full size)", cal: 218, serving: "1 bar (42g)" },
+  { name: "M&Ms - Milk Chocolate", cal: 240, serving: "1.69 oz bag" },
+  { name: "M&Ms - Peanut", cal: 250, serving: "1.74 oz bag" },
+  { name: "Twix Bar", cal: 250, serving: "1 bar (50g)" },
+  { name: "Skittles", cal: 250, serving: "1 fun size bag (61.5g)" },
+  { name: "Haribo Gold-Bears Gummies", cal: 140, serving: "17 pieces (41g)" },
+
+  // --- FRESH PRODUCE ---
+  { name: "Apple", cal: 95, serving: "1 medium" },
+  { name: "Banana", cal: 105, serving: "1 medium" },
+  { name: "Orange", cal: 62, serving: "1 medium" },
+  { name: "Grapes", cal: 104, serving: "1 cup" },
+  { name: "Strawberries", cal: 49, serving: "1 cup" },
+  { name: "Blueberries", cal: 84, serving: "1 cup" },
+  { name: "Watermelon", cal: 86, serving: "2 cups diced" },
+  { name: "Avocado", cal: 234, serving: "1 whole" },
+  { name: "Broccoli", cal: 55, serving: "1 cup" },
+  { name: "Spinach", cal: 7, serving: "1 cup raw" },
+  { name: "Carrots", cal: 52, serving: "1 cup" },
+  { name: "Sweet Potato", cal: 103, serving: "1 medium" },
+  { name: "Potato (baked)", cal: 161, serving: "1 medium" },
+  { name: "Corn", cal: 132, serving: "1 cup" },
+  { name: "Green Beans", cal: 31, serving: "1 cup" },
+  { name: "Romaine Lettuce", cal: 8, serving: "1 cup" },
+  { name: "Tomato", cal: 22, serving: "1 medium" },
+  { name: "Cucumber", cal: 16, serving: "1 cup sliced" },
+  { name: "Bell Pepper", cal: 31, serving: "1 medium" },
+
+  // --- PROTEINS / MEAT ---
+  { name: "Chicken Breast", cal: 165, serving: "3 oz cooked" },
+  { name: "Salmon", cal: 208, serving: "3 oz cooked" },
+  { name: "Tuna (canned in water)", cal: 109, serving: "3 oz" },
+  { name: "Egg", cal: 78, serving: "1 large" },
+  { name: "Egg White", cal: 17, serving: "1 large" },
+  { name: "Ground Beef (93% lean)", cal: 145, serving: "3 oz cooked" },
+  { name: "Ground Beef (80% lean)", cal: 218, serving: "3 oz cooked" },
+  { name: "Shrimp", cal: 84, serving: "3 oz cooked" },
+  { name: "Turkey Breast", cal: 135, serving: "3 oz cooked" },
+  { name: "Pork Tenderloin", cal: 122, serving: "3 oz cooked" },
+  { name: "Bacon", cal: 161, serving: "3 slices cooked" },
+  { name: "Sausage (pork link)", cal: 268, serving: "2 links" },
+
+  // --- DAIRY ---
+  { name: "Milk (whole)", cal: 149, serving: "1 cup" },
+  { name: "Milk (2%)", cal: 122, serving: "1 cup" },
+  { name: "Milk (skim)", cal: 83, serving: "1 cup" },
+  { name: "Cheddar Cheese", cal: 113, serving: "1 oz" },
+  { name: "Mozzarella (part-skim)", cal: 72, serving: "1 oz" },
+  { name: "Parmesan (grated)", cal: 22, serving: "1 tbsp" },
+  { name: "Cottage Cheese (2%)", cal: 206, serving: "1 cup" },
+  { name: "Butter", cal: 102, serving: "1 tbsp" },
+  { name: "Cream Cheese", cal: 99, serving: "2 tbsp" },
+  { name: "Sour Cream", cal: 60, serving: "2 tbsp" },
+
+  // --- GRAINS / STARCHES ---
+  { name: "White Rice", cal: 206, serving: "1 cup cooked" },
+  { name: "Brown Rice", cal: 216, serving: "1 cup cooked" },
+  { name: "Pasta (white)", cal: 220, serving: "1 cup cooked" },
+  { name: "Whole Wheat Pasta", cal: 174, serving: "1 cup cooked" },
+  { name: "Oatmeal (cooked)", cal: 166, serving: "1 cup" },
+  { name: "Bagel (plain)", cal: 270, serving: "1 medium" },
+  { name: "Flour Tortilla (medium)", cal: 146, serving: "1 tortilla" },
+  { name: "Bread (white)", cal: 79, serving: "1 slice" },
+  { name: "Bread (whole wheat)", cal: 81, serving: "1 slice" },
+  { name: "Pancakes", cal: 175, serving: "2 medium" },
+  { name: "Waffle", cal: 218, serving: "1 large" },
+  { name: "Quinoa", cal: 222, serving: "1 cup cooked" },
+
+  // --- CONDIMENTS & EXTRAS ---
+  { name: "Olive Oil", cal: 119, serving: "1 tbsp" },
+  { name: "Coconut Oil", cal: 121, serving: "1 tbsp" },
+  { name: "Peanut Butter (regular)", cal: 188, serving: "2 tbsp" },
+  { name: "Almond Butter", cal: 196, serving: "2 tbsp" },
+  { name: "Honey", cal: 64, serving: "1 tbsp" },
+  { name: "Ketchup", cal: 19, serving: "1 tbsp" },
+  { name: "Ranch Dressing", cal: 145, serving: "2 tbsp" },
+  { name: "Balsamic Vinaigrette", cal: 90, serving: "2 tbsp" },
+  { name: "Hummus", cal: 108, serving: "1/4 cup" },
+  { name: "Salsa", cal: 36, serving: "1/4 cup" },
+  { name: "Guacamole", cal: 50, serving: "2 tbsp" },
+  { name: "Hot Sauce (Tabasco)", cal: 0, serving: "1 tsp" },
+  { name: "Sriracha", cal: 5, serving: "1 tsp" },
+  { name: "Mayonnaise", cal: 94, serving: "1 tbsp" },
+  { name: "Mustard (yellow)", cal: 9, serving: "1 tsp" },
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+
+// ── State ────────────────────────────────────────────────────────────────────
+let goal = 2000;
+let log  = [];
+let water = 0;
+let pendingFood = null;
+const WATER_GOAL    = 8;
+const OZ_PER_BOTTLE = 16.9;
+
+// ── Persistent storage helpers ────────────────────────────────────────────────
+async function storageGet(key) {
+  try { const r = await window.storage.get(key); return r ? r.value : null; } catch(e) { return null; }
+}
+async function storageSet(key, value) {
+  try { await window.storage.set(key, value); } catch(e) {}
+}
+
+// ── Save & Load ───────────────────────────────────────────────────────────────
+async function saveAll() {
+  const today = todayKey();
+  await storageSet('calGoal',          String(goal));
+  await storageSet('calLog_' + today,  JSON.stringify(log));
+  await storageSet('water_'  + today,  String(water));
+  // snapshot yesterday and earlier (once per day)
+  for (let i = 1; i <= 60; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const existing = await storageGet('calLog_' + key);
+    if (!existing) continue;
+    const snap = await storageGet('snapshot_' + key);
+    if (snap) continue; // already saved
+    const dayLog   = JSON.parse(existing);
+    const dayWater = parseInt(await storageGet('water_' + key) || '0');
+    const totalCal = dayLog.reduce((s,x) => s + x.cal, 0);
+    await storageSet('snapshot_' + key, JSON.stringify({ cal: totalCal, water: dayWater, items: dayLog.length }));
+  }
+}
+
+async function loadAll() {
+  const today = todayKey();
+  goal  = parseInt(await storageGet('calGoal') || '2000');
+  log   = JSON.parse(await storageGet('calLog_' + today) || '[]');
+  water = parseInt(await storageGet('water_'  + today) || '0');
+}
+
+// ── Calorie render ────────────────────────────────────────────────────────────
+function totalCals() { return log.reduce((s,x) => s + x.cal, 0); }
+
+function render() {
+  const total = totalCals();
+  const remaining = goal - total;
+  const pct  = Math.min(total / goal, 1);
+  const over = total > goal;
+  const circ = 477.5;
+
+  document.getElementById('ringCal').textContent  = total;
+  document.getElementById('ringCal').className     = over ? 'ring-cal over' : 'ring-cal';
+  document.getElementById('goalVal').textContent   = goal;
+  document.getElementById('remainVal').textContent = Math.abs(remaining);
+  document.getElementById('remainVal').className   = over ? 'stat-val over' : 'stat-val';
+  document.getElementById('remainLbl').textContent = over ? 'Over' : 'Remaining';
+
+  const fill = document.getElementById('ringFill');
+  fill.style.strokeDashoffset = circ - pct * circ;
+  fill.style.stroke = over ? 'var(--danger)' : 'var(--accent)';
+
+  const pb = document.getElementById('progressBar');
+  pb.style.width      = Math.min(pct * 100, 100) + '%';
+  pb.style.background = over ? 'var(--danger)' : 'var(--accent)';
+
+  const list = document.getElementById('logList');
+  list.innerHTML = log.length === 0
+    ? '<div class="empty-log">No foods logged yet.<br>Search above to add something.</div>'
+    : log.map((item, i) => `
+        <div class="log-item">
+          <div class="log-info">
+            <div class="log-name">${item.name}</div>
+            <div class="log-serving">${item.servingLabel}</div>
+          </div>
+          <div class="log-right">
+            <div class="log-cal">${item.cal} cal</div>
+            <button class="log-del" onclick="removeItem(${i})">✕</button>
+          </div>
+        </div>`).join('');
+
+  saveAll();
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+function onSearch() {
+  const q  = document.getElementById('searchInput').value.trim().toLowerCase();
+  const el = document.getElementById('results');
+  if (!q) { el.classList.remove('open'); return; }
+  const hits = FOODS.filter(f => f.name.toLowerCase().includes(q)).slice(0, 8);
+  if (!hits.length) { el.classList.remove('open'); return; }
+  el.innerHTML = hits.map(f => `
+    <div class="result-item" onclick="openQtyModal(${FOODS.indexOf(f)})">
+      <div>
+        <div class="result-name">${highlight(f.name, q)}</div>
+        <div class="result-serving">${f.serving}</div>
+      </div>
+      <div class="result-cal">${f.cal} cal</div>
+    </div>`).join('');
+  el.classList.add('open');
+}
+
+function highlight(name, q) {
+  const idx = name.toLowerCase().indexOf(q);
+  if (idx === -1) return name;
+  return name.slice(0, idx) + `<strong style="color:var(--accent)">${name.slice(idx, idx+q.length)}</strong>` + name.slice(idx+q.length);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap') && !e.target.closest('.results'))
+    document.getElementById('results').classList.remove('open');
+});
+
+// ── Food modal ────────────────────────────────────────────────────────────────
+function openQtyModal(idx) {
+  pendingFood = FOODS[idx];
+  document.getElementById('qtyFoodName').textContent = pendingFood.name;
+  document.getElementById('qtyFoodCal').textContent  = `${pendingFood.cal} cal per serving (${pendingFood.serving})`;
+  document.getElementById('qtyInput').value = 1;
+  document.getElementById('qtyModal').classList.add('open');
+  document.getElementById('results').classList.remove('open');
+  document.getElementById('searchInput').value = '';
+}
+function closeQtyModal() { document.getElementById('qtyModal').classList.remove('open'); pendingFood = null; }
+function confirmAdd() {
+  if (!pendingFood) return;
+  const qty = parseFloat(document.getElementById('qtyInput').value) || 1;
+  const cal = Math.round(pendingFood.cal * qty);
+  const servingLabel = qty === 1 ? pendingFood.serving : `${qty}x ${pendingFood.serving}`;
+  log.push({ name: pendingFood.name, cal, servingLabel });
+  closeQtyModal();
+  render();
+}
+function removeItem(i) { log.splice(i, 1); render(); }
+
+// ── Goal modal ────────────────────────────────────────────────────────────────
+function openGoalModal()  { document.getElementById('goalInput').value = goal; document.getElementById('goalModal').classList.add('open'); }
+function closeGoalModal() { document.getElementById('goalModal').classList.remove('open'); }
+function saveGoal() {
+  const v = parseInt(document.getElementById('goalInput').value);
+  if (v >= 500 && v <= 9999) { goal = v; closeGoalModal(); render(); }
+}
+
+// ── Water ─────────────────────────────────────────────────────────────────────
+function renderWater() {
+  const totalOz  = (water * OZ_PER_BOTTLE).toFixed(1);
+  const remainOz = Math.max(((WATER_GOAL - water) * OZ_PER_BOTTLE).toFixed(1), 0);
+  const pct      = Math.min(water / WATER_GOAL * 100, 100);
+
+  document.getElementById('waterCount').textContent = water;
+  document.getElementById('waterOz').textContent    = totalOz + ' oz';
+  document.getElementById('waterOzRemain').textContent = water >= WATER_GOAL ? '' : remainOz + ' oz to go';
+  document.getElementById('waterProgressFill').style.width = pct + '%';
+
+  const bottlesEl = document.getElementById('waterBottles');
+  bottlesEl.innerHTML = water === 0
+    ? '<span style="font-size:13px;color:var(--muted)">Press + to log a bottle</span>'
+    : Array.from({length: water}, () => `<span class="bottle-icon" onclick="removeWater()">💧</span>`).join('');
+
+  document.getElementById('waterCompleteMsg').innerHTML = water >= WATER_GOAL
+    ? '<span class="water-complete">🎉 Goal reached!</span>'
+    : `<span style="font-size:12px;color:var(--muted)">${WATER_GOAL - water} left</span>`;
+
+  saveAll();
+}
+
+function addWater()    { water++;              renderWater(); }
+function removeWater() { if (water > 0) { water--; renderWater(); } }
+
+// ── History ───────────────────────────────────────────────────────────────────
+async function renderHistory() {
+  const listEl  = document.getElementById('historyList');
+  const entries = [];
+  for (let i = 1; i <= 60; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key  = d.toISOString().slice(0, 10);
+    const snap = await storageGet('snapshot_' + key);
+    if (snap) entries.push({ date: new Date(d), ...JSON.parse(snap) });
+  }
+  if (entries.length === 0) {
+    listEl.innerHTML = '<div class="empty-history">No history yet — check back tomorrow!</div>';
+    return;
+  }
+  listEl.innerHTML = entries.map(e => {
+    const dow     = e.date.toLocaleDateString('en-US', { weekday: 'short' });
+    const dom     = e.date.getDate();
+    const mon     = e.date.toLocaleDateString('en-US', { month: 'short' });
+    const over    = e.cal > goal;
+    const waterOz = (e.water * OZ_PER_BOTTLE).toFixed(1);
+    const badge   = over
+      ? `<span class="history-badge badge-over">Over</span>`
+      : `<span class="history-badge badge-under">Under</span>`;
+    return `
+      <div class="history-day">
+        <div class="history-date-block">
+          <div class="history-dow">${dow}</div>
+          <div class="history-dom">${dom}</div>
+          <div class="history-dow">${mon}</div>
+        </div>
+        <div class="history-divider"></div>
+        <div class="history-stats">
+          <div class="history-stat">
+            <div class="history-stat-val" style="color:${over ? 'var(--danger)' : 'var(--accent)'}">${e.cal}</div>
+            <div class="history-stat-lbl">Calories</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-val" style="color:#60c8f0">${waterOz} oz</div>
+            <div class="history-stat-lbl">Water</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-val">${e.items}</div>
+            <div class="history-stat-lbl">Foods</div>
+          </div>
+        </div>
+        ${badge}
+      </div>`;
+  }).join('');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+const d = new Date();
+document.getElementById('dateLabel').textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+(async () => {
+  await loadAll();
+  render();
+  renderWater();
+  await renderHistory();
+})();
+</script>
+</body>
+</html>
